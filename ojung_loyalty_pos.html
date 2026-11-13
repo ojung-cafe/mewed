@@ -1,0 +1,236 @@
+<!-- ... existing code ... -->
+    <style>
+        :root {
+            --primary-dark: #381F15;    /* Espresso / Dark Brown */
+            --primary-main: #8C5835;    /* Rich Caramel / OJung Brown */
+            --primary-accent: #C28E5C;  /* Warm Gold Caramel */
+            --bg-cream: #FAF6F0;        /* Creamy Off-White */
+            --bg-soft: #F3EAE0;         /* Soft Warm Cream */
+        }
+
+        body {
+<!-- ... existing code ... -->
+    <!-- Top Navigation Header -->
+    <header class="bg-ojung-gradient text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <!-- Brand Logo & Name -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold text-xl shadow-inner border-2 border-amber-300">
+                    <i class="fa-solid fa-mug-hot"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-lg sm:text-xl leading-tight tracking-wide">โอจัง <span class="text-amber-200 font-semibold">OJung</span></h1>
+                        <!-- Real-time Sync Status Badge -->
+                        <span id="sync-status-badge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/25 text-amber-100 border border-white/15">
+                            <span id="sync-status-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                            <span id="sync-status-text">กำลังเชื่อมต่อ...</span>
+                        </span>
+                    </div>
+                    <p class="text-xs text-amber-100/90">ชาไข่มุก • กาแฟ • อิตาเลียนโซดา</p>
+                </div>
+            </div>
+
+            <!-- Mode Switcher & Theme Customizer -->
+<!-- ... existing code ... -->
+            <!-- Shop Login Gate (user: OJung, password: 123456) -->
+            <div id="shop-login-card" class="max-w-md mx-auto bg-white rounded-3xl shadow-xl border border-amber-200 overflow-hidden">
+                <div class="bg-[#381F15] p-6 text-center text-white">
+                    <div class="w-16 h-16 bg-amber-500/20 border border-amber-400/40 text-amber-400 rounded-2xl mx-auto flex items-center justify-center text-2xl mb-3">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h2 class="text-xl font-bold">เข้าสู่ระบบหน้าร้านค้า</h2>
+                    <p class="text-amber-200/80 text-xs mt-1">เฉพาะพนักงานและเจ้าของร้าน โอจัง (OJung)</p>
+                </div>
+<!-- ... existing code ... -->
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-cash-register"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-bold text-amber-950">ระบบหน้าร้าน โอจัง (OJung POS)</h2>
+                            <p id="shop-sync-subtitle" class="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-ping"></span>
+                                ซิงค์ข้อมูลข้ามเครื่องแบบเรียลไทม์ (Online)
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+<!-- ... existing code ... -->
+            <div class="grid grid-cols-2 gap-2.5">
+                <button onclick="applyTheme('#381F15', '#8C5835', '#C28E5C', '#FAF6F0')" class="p-3 rounded-2xl border-2 border-amber-400 bg-amber-50 flex items-center gap-2 text-left">
+                    <span class="w-6 h-6 rounded-full bg-[#381F15] shrink-0"></span>
+                    <span class="text-xs font-bold text-amber-950">โอจัง คาราเมล (หลัก)</span>
+                </button>
+                <button onclick="applyTheme('#7C2D12', '#EA580C', '#F59E0B', '#FFF7ED')" class="p-3 rounded-2xl border border-gray-200 hover:border-orange-400 bg-orange-50 flex items-center gap-2 text-left">
+<!-- ... existing code ... -->
+        // Active UI States
+        let activeMode = 'customer'; // 'customer' | 'shop'
+        let isShopAuthenticated = sessionStorage.getItem('ojung_shop_auth') === 'true';
+        let currentCustomerPhone = null;
+        let customerUnsubscribe = null;
+
+        // POS States
+        let selectedPosCustomer = null; // { phone, name, points }
+        let currentMenuCategory = 'all';
+        let orderCart = {}; // { itemId: { item, qty } }
+        let bonusPointOffset = 0;
+        let allMembersCache = [];
+        let allOrdersCache = [];
+        let html5QrScanner = null;
+
+        function updateSyncStatusUI(isOnline, labelText) {
+            const dot = document.getElementById('sync-status-dot');
+            const text = document.getElementById('sync-status-text');
+            const shopSub = document.getElementById('shop-sync-subtitle');
+            if (isOnline) {
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+                text.textContent = labelText || 'ซิงค์ออนไลน์';
+                if (shopSub) {
+                    shopSub.className = 'text-xs text-emerald-600 font-medium flex items-center gap-1';
+                    shopSub.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-ping"></span> ซิงค์ข้อมูลข้ามเครื่องแบบเรียลไทม์ (Online)';
+                }
+            } else {
+                dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+                text.textContent = labelText || 'โหมดออฟไลน์';
+                if (shopSub) {
+                    shopSub.className = 'text-xs text-amber-600 font-medium flex items-center gap-1';
+                    shopSub.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span> โหมดจำลองในเครื่อง (ไม่พบการเชื่อมต่อ Cloud)';
+                }
+            }
+        }
+
+        async function initFirebase() {
+            try {
+                if (typeof __firebase_config === 'undefined' || !__firebase_config) {
+                    throw new Error('Firebase config missing, using fallback');
+                }
+                const firebaseConfig = typeof __firebase_config === 'string'
+                    ? JSON.parse(__firebase_config)
+                    : __firebase_config;
+
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Authenticate BEFORE any Firestore queries (Rule 3)
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                currentUser = auth.currentUser;
+                if (!currentUser) {
+                    await new Promise((resolve) => {
+                        const unsub = onAuthStateChanged(auth, (user) => {
+                            if (user) {
+                                currentUser = user;
+                                unsub();
+                                resolve();
+                            }
+                        });
+                    });
+                }
+
+                useMemoryFallback = false;
+                updateSyncStatusUI(true, 'ซิงค์ออนไลน์');
+                setupRealtimeShopListeners();
+            } catch (err) {
+                console.warn("Running in standalone memory mode:", err);
+                useMemoryFallback = true;
+                updateSyncStatusUI(false, 'โหมดในเครื่อง');
+                renderRecentMembers();
+            }
+        }
+
+        // Firestore Collection Helpers (Strict Path Rule 1)
+<!-- ... existing code ... -->
+        window.openShopJoinQrModal = function() {
+            const modal = document.getElementById('shop-join-qr-modal');
+            modal.classList.remove('hidden');
+            const qrContainer = document.getElementById('shop-join-qrcode');
+            qrContainer.innerHTML = '';
+            const baseUrl = window.location.href.split('?')[0].split('#')[0];
+            const joinUrl = `${baseUrl}?register=1`;
+            new QRCode(qrContainer, {
+                text: joinUrl,
+                width: 200,
+                height: 200,
+                colorDark: "#381F15",
+                colorLight: "#FFFFFF",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        };
+
+        window.openSalesLogModal = function() {
+<!-- ... existing code ... -->
+            new QRCode(qrDiv, {
+                text: `OJUNG:${phone}`,
+                width: 190,
+                height: 190,
+                colorDark: "#381F15",
+                colorLight: "#FFFFFF",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+
+        function renderCustomerHistory(phone) {
+<!-- ... existing code ... -->
+            if (user === 'OJung' && pass === '123456') {
+                isShopAuthenticated = true;
+                sessionStorage.setItem('ojung_shop_auth', 'true');
+                errEl.classList.add('hidden');
+                document.getElementById('shop-login-card').classList.add('hidden');
+                document.getElementById('shop-dashboard').classList.remove('hidden');
+                renderMenuGrid();
+                renderRecentMembers();
+                showToast('เข้าสู่ระบบร้านค้า โอจัง สำเร็จ!');
+            } else {
+                errEl.classList.remove('hidden');
+                showToast('รหัสผ่านร้านค้าไม่ถูกต้อง', 'error');
+            }
+        });
+
+        window.logoutShop = function() {
+            isShopAuthenticated = false;
+            sessionStorage.removeItem('ojung_shop_auth');
+            stopQrScanner();
+            document.getElementById('shop-dashboard').classList.add('hidden');
+            document.getElementById('shop-login-card').classList.remove('hidden');
+            document.getElementById('shop-username').value = '';
+            document.getElementById('shop-password').value = '';
+            showToast('ออกจากระบบร้านค้าแล้ว', 'info');
+        };
+
+        // =========================================================================
+        // 7. SHOP POS: QR SCANNER & CUSTOMER SELECTION
+<!-- ... existing code ... -->
+        // Initialize App on Load (Await Firebase Auth before handling URL params)
+        window.addEventListener('DOMContentLoaded', async () => {
+            renderMenuGrid();
+            await initFirebase();
+
+            // Restore shop login state if refreshed on shop device
+            if (isShopAuthenticated) {
+                document.getElementById('shop-login-card').classList.add('hidden');
+                document.getElementById('shop-dashboard').classList.remove('hidden');
+            }
+
+            // Handle URL Parameters (?phone=08xxxxxxxx or ?register=1)
+            const params = new URLSearchParams(window.location.search);
+            const paramPhone = (params.get('phone') || '').replace(/\D/g, '');
+            const isRegister = params.get('register') === '1';
+
+            if (paramPhone.length >= 9) {
+                switchAppMode('customer');
+                await loadOrRegisterCustomer(paramPhone);
+            } else if (isRegister) {
+                switchAppMode('customer');
+                setTimeout(() => document.getElementById('customer-phone-input')?.focus(), 200);
+            }
+        });
+    </script>
+</body>
+</html>
